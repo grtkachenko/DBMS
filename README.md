@@ -1,4 +1,4 @@
-DDMS
+DBMS
 ====
 
 Database management system course
