@@ -1,4 +1,0 @@
-Student_id, Student_Name, Group_id, Group_name, Course_Id, Course_Name, Lecturer_Id, Lecturer_Name, Mark
-
-Student_id -> Studnet_Name
-

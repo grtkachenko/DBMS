@@ -1,0 +1,29 @@
+Student_id, Student_Name, Group_id, Group_name, Course_Id, Course_Name, Lecturer_Id, Lecturer_Name, Mark
+
+Функциональные зависимости
+
+Student_id				-> 	Student_Name, Group_id
+Group_id				-> 	Group_name
+Course_Id 				-> 	Course_name
+Lecturer_Id 				-> 	Lecturer_Name
+Student_id, Course_Id 			-> 	Mark
+Course_id, Group_id 			-> 	Lecturer_id
+
+Ключи
+
+(Student_id, Course_id) - единственный ключ
+
+Неприводимое множество
+
+Student_id 				-> 	Student_Name
+Student_id 				-> 	Group_id
+Group_id 				-> 	Group_name
+Course_id 				-> 	Course_name
+Lecturer_Id 				-> 	Lecturer_Name
+Student_id, Course_id 			-> 	Mark
+Course_id, Group_id 			-> 	Lecturer_id
+
+
+
+
+
