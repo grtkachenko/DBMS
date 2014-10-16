@@ -72,7 +72,7 @@ Course_id, Student_id -> Lecturer_id
 Lecturer_id -> Lecturer_Name
 Student_id, Course_id -> Mark
 
-2. Далее декомпозируем по отношению Course_id -> Course_name
+3. Далее декомпозируем по отношению Course_id -> Course_name
 
 Student_id, Group_id; ключ - Student_id                      
 Student_id -> Group_id
@@ -91,20 +91,49 @@ Course_id, Student_id -> Lecturer_id
 Lecturer_id -> Lecturer_Name
 Student_id, Course_id -> Mark
 
-Заметим, что теперь все отношения удовлетворяют второй нормальной форме.
+Заметим, что теперь все отношения удовлетворяют второй нормальной форме. То имеем право объединить первые три таблицы
+
+Student_id, Student_name, Group_id, Group_name; ключ - Student_id                      
+Student_id -> Group_id
+Student_id -> Student_name
+Group_id -> Group_name
+
+Course_Id, Course_Name; ключ - Course_Id                      
+Course_id -> Course_name
+
+Student_id, Course_Id, Lecturer_Id, Lecturer_Name, Mark; ключ - (Student_Id, Course_id)
+Course_id, Student_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
 
 3
 
-Заметим, что в последнем отношении существует Course_id, Student_id -> Lecturer_id -> Lecturer_Name. То есть неключевой атрибут Lecturer_Name зависит не непосредственно от ключа. Декомпозируем по этой зависимости и получаем.
+Заметим, что в первом отношении существует Student_id -> Group_id -> Group_name. То есть неключевой атрибут Group_name зависит не непосредственно от ключа. Декомпозируем по этой зависимости и получаем.
 
-Student_id, Group_id; ключ - Student_id                      
+Student_id, Student_name, Group_id; ключ - Student_id                      
 Student_id -> Group_id
-
-Student_id, Student_name; ключ - Student_id                      
 Student_id -> Student_name
 
-Student_id, Group_name; ключ - Student_id                      
-Student_id -> Group_name
+Group_id, Group_name; ключ - Group_id                      
+Group_id -> Group_name
+
+Course_Id, Course_Name; ключ - Course_Id                      
+Course_id -> Course_name
+
+Student_id, Course_Id, Lecturer_Id, Lecturer_Name, Mark; ключ - (Student_Id, Course_id)
+Course_id, Student_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
+Заметим, что в последнем отношении существует Course_id, Student_id -> Lecturer_id -> Lecturer_Name. То есть неключевой атрибут Lecturer_Name зависит не непосредственно от ключа. Декомпозируем по этой зависимости и получаем.
+
+Student_id, Student_name, Group_id; ключ - Student_id                      
+Student_id -> Group_id
+Student_id -> Student_name
+
+Group_id, Group_name; ключ - Group_id                      
+Group_id -> Group_name
 
 Course_Id, Course_Name; ключ - Course_Id                      
 Course_id -> Course_name
