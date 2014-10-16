@@ -1,0 +1,133 @@
+Student_id, Student_Name, Group_id, Group_name, Course_Id, Course_Name, Lecturer_Id, Lecturer_Name, Mark
+
+0
+
+Возьмем неприводимое множество для данного отношения
+
+Student_id -> Student_Name, Group_id
+Group_id -> Group_name
+Course_id -> Course_name
+Course_id, Group_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
+Выполним для него транзитивное замыкание
+
+Student_id -> Student_Name, Group_id, Group_name
+Group_id -> Group_name
+Course_id -> Course_name
+Course_id, Student_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
+1
+
+1) нет повторяющихся
+2) все атрибуты атомарны
+3) (Student_Id, Course_id) - ключ
+
+То имеем отношение в 1 нормальной форме.
+
+Student_id -> Student_Name
+Student_id -> Group_id
+Student_id -> Group_name
+Group_id -> Group_name
+Course_id -> Course_name
+Course_id, Student_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
+2
+
+1) Декомпозируем таким образом, чтобы не осталось отношений, в которых неключевые атрибуты функционально зависят от части ключа. Декомпозируем по отношению Student_id -> Group_id
+1. 
+
+Student_id, Group_id; ключ - Student_id                      
+Student_id -> Group_id
+
+Student_id, Student_Name, Group_name, Course_Id, Course_Name, Lecturer_Id, Lecturer_Name, Mark; ключ - (Student_Id, Course_id)
+Student_id -> Student_Name
+Student_id -> Group_name
+Course_id -> Course_name
+Course_id, Student_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
+
+2. Далее декомпозируем по отношениям Student_id -> Student_Name и Student_id -> Group_name
+
+Student_id, Group_id; ключ - Student_id                      
+Student_id -> Group_id
+
+Student_id, Student_name; ключ - Student_id                      
+Student_id -> Student_name
+
+Student_id, Group_name; ключ - Student_id                      
+Student_id -> Group_name
+
+
+Student_id, Course_Id, Course_Name, Lecturer_Id, Lecturer_Name, Mark; ключ - (Student_Id, Course_id)
+Course_id -> Course_name
+Course_id, Student_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
+2. Далее декомпозируем по отношению Course_id -> Course_name
+
+Student_id, Group_id; ключ - Student_id                      
+Student_id -> Group_id
+
+Student_id, Student_name; ключ - Student_id                      
+Student_id -> Student_name
+
+Student_id, Group_name; ключ - Student_id                      
+Student_id -> Group_name
+
+Course_Id, Course_Name; ключ - Course_Id                      
+Course_id -> Course_name
+
+Student_id, Course_Id, Lecturer_Id, Lecturer_Name, Mark; ключ - (Student_Id, Course_id)
+Course_id, Student_id -> Lecturer_id
+Lecturer_id -> Lecturer_Name
+Student_id, Course_id -> Mark
+
+Заметим, что теперь все отношения удовлетворяют второй нормальной форме.
+
+3
+
+Заметим, что в последнем отношении существует Course_id, Student_id -> Lecturer_id -> Lecturer_Name. То есть неключевой атрибут Lecturer_Name зависит не непосредственно от ключа. Декомпозируем по этой зависимости и получаем.
+
+Student_id, Group_id; ключ - Student_id                      
+Student_id -> Group_id
+
+Student_id, Student_name; ключ - Student_id                      
+Student_id -> Student_name
+
+Student_id, Group_name; ключ - Student_id                      
+Student_id -> Group_name
+
+Course_Id, Course_Name; ключ - Course_Id                      
+Course_id -> Course_name
+
+Lecturer_Id, Lecturer_Name; ключ - (Lecturer_Id)
+Lecturer_id -> Lecturer_Name
+
+Student_id, Course_Id, Lecturer_Id, Mark; ключ - (Student_Id, Course_id)
+Student_id, Course_id -> Lecturer_id
+Student_id, Course_id -> Mark
+
+Получившиеся отношения удовлетворяют третьей форме. 
+
+
+4
+
+Текущее отношение удовлетворяет НФБК, т.к. во всех отношениях в левых частях зависимостях стоят ключи.  
+
+Далее заметим, что первый пять отношений находятся в 4НФ, т.к. в них по два атрибута. Рассмотрим последнее отношение. Но заметим, что оно так же по определению 4НФ находится в ней.
+
+5
+
+Наше отношение находится в пятой форме.
+
+
+
