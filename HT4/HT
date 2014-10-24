@@ -17,6 +17,7 @@ Student_id -> Student_Name, Group_id, Group_name
 Group_id -> Group_name
 Course_id -> Course_name
 Course_id, Student_id -> Lecturer_id
+Course_id, Group_id -> Lecturer_id
 Lecturer_id -> Lecturer_Name
 Student_id, Course_id -> Mark
 
