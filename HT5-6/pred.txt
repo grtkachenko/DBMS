@@ -1,0 +1,69 @@
+# 1. 
+select * from Students
+where
+exists M : Marks 
+  (exists C : Courses 
+    (M.cid = C.id and C.name = "Базы данных" and M.sid = sid and M.mark = 4))
+
+# 2a.
+select * from Students
+where
+not exists M : Marks 
+  (exists C : Courses 
+    (M.cid = C.id and C.name = "Базы данных" and M.sid = sid))
+
+# 2b.
+select * from Students
+where
+exists Sch : Schedules
+  (exists C : Courses
+    (gid = Sch.gid and Sch.cid = C.id and C.name = "Базы данных"))
+
+and    
+
+not exists M : Marks 
+  (exists C : Courses 
+    (M.cid = C.id and C.name = "Базы данных" and M.sid = sid))
+
+# 3. 
+select * from Students
+where
+exists M : Marks 
+  (exists L : Lecturers 
+    (exists Sch : Schedules
+      (L.name = "Корнеев" and M.sid = sid and Sch.cid = M.cid and Sch.lid = L.id and Sch.gid = gid)))
+
+# 4.
+select * from Students
+where
+not exists M : Marks 
+  (exists L : Lecturers 
+    (exists Sch : Schedules
+      (L.name = "Корнеев" and M.sid = sid and Sch.cid = M.cid and Sch.lid = L.id and Sch.gid = gid)))
+
+# 5. 
+select * from Students
+where 
+exists L : Lecturers 
+  L.name = "Корнеев" and
+  forall Sch : Schedules
+    not (Sch.lid == L.id and gid = Sch.gid) or (exists M : Marks (M.sid = sid and Sch.cid = M.cid))
+
+# 6.
+select Students.name, Courses.name from Students, Courses
+where 
+exists Sch : Schedule
+  (gid = Sch.gid and cid = Sch.cid)
+
+# 7.
+select * from Students
+where
+exists Sch : Schedules 
+  (exists L : Lecturers 
+    (Sch.lid = L.id and L.name = "Корнеев" and Sch.gid = gid))
+
+# 8.
+select Students1.SId, Students1.SId from Students1, Students2
+where
+forall M1 : Marks,
+  not (M1.sid = Students1.id and M1.mark >= 60) or (exists M2 : Marks (M2.cid = M1.cid and M2.sid = Students2.sid and M2.mark >= 60)
