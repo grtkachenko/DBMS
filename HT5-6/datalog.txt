@@ -1,0 +1,31 @@
+# 1. 
+Task1(sid) :- Marks(sid, cid, 4), Courses(cid, 'Базы данных').
+
+# 2a.
+Task2a(sid) :- not Marks(sid, cid, _), Courses(cid, 'Базы данных').
+
+# 2b.
+HaveDB(sid) :- Students(sid, _, gid), Schedule(gid, cid, _), Courses(cid, 'Базы данных').
+Task2b(sId) :- HaveDB(sid), Task2a(sid).
+
+# 3. 
+Task3(sid) :- Students(sid, _, gid), Marks(sid, cid, _), Schedule(gid, cid, lid), Lecturers(lid, 'Корнеев').
+
+# 4.
+Task4(sid) :- Students(sid, _, _), not Task3(sid).
+
+# 5. 
+Task5Help(sid) :- Students(sid, _, gid), Schedule(gid, cid, lid), Lecturers(lid, 'Корнеев'), not Marks(sid, cid, _)
+Task5(sid) :- Students(sid, _, _), not Task5Help(sid)
+
+# 6.
+Task6(sname, cname) :- Students(sid, sname, gid), Schedule(gid, cid, _), Courses(cid, cname)
+
+# 7.
+Task7(lname, sname) :- Students(sid, sname, gid), Schedule(gid, _, lid), Lecturers(lid, lname)
+
+# 8.
+AllPairs(sid1, sid2) :- Students(sid1, _), Students(sid2, _).
+BadPairs1(sid1, sid2) :- Marks(sid1, cid, mark1), Marks(sid2, cid, mark2), mark1 >= 60, mark2 < 60
+BadPairs2(sid1, sid2) :- Marks(sid1, cid, mark1), not Marks(sid2, cid, mark2)
+Task8(sid1, sid2) :- AllPairs(sid1, sid2), not BadPairs1(sid1, sid2), not BadPairs2(sid1, sid2).

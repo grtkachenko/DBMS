@@ -66,4 +66,4 @@ exists Sch : Schedules
 select Students1.SId, Students1.SId from Students1, Students2
 where
 forall M1 : Marks,
-  not (M1.sid = Students1.id and M1.mark >= 60) or (exists M2 : Marks (M2.cid = M1.cid and M2.sid = Students2.sid and M2.mark >= 60)
+  not (M1.sid = Students1.id and M1.mark >= 60) or (exists M2 : Marks (M2.cid = M1.cid and M2.sid = Students2.sid and M2.mark >= 60))

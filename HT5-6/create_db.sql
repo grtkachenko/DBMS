@@ -32,7 +32,7 @@ create table Marks(
 	PRIMARY KEY (StudentId, CourseId) 
 );
 
-create table Semesters(
+create table Schedules(
 	GroupId int, 
 	CourseId int, 
 	LecturerId int NOT NULL, 
