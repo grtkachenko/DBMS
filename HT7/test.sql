@@ -96,6 +96,28 @@ insert into Schedules
     ;
 ---------------------
 
+--1--
+delete from Students where 
+    not exists (select * from Schedules, Marks where
+        Students.StudentId = Marks.StudentId and
+        Schedules.CourseId = Marks.CourseId and
+        Marks.Value < 60);
+
+--2--
+delete from Students where 
+    Students.StudentId in (select Losers.StudentId from 
+        (select SC.StudentId, count (*) as Cnt from 
+            (select * from Students natural join Schedules where 
+                not exists (select * from Marks where 
+                Marks.CourseId = Schedules.CourseId and
+                Marks.StudentId = Students.StudentId and
+                Marks.Value >= 60)
+        ) as SC group by SC.StudentId) as Losers where Losers.Cnt >= 3);
+
+--3--
+delete from Groups where 
+    not exists (select * from Students where Students.GroupId = Groups.GroupId);
+
 --4--
 create view Losers as 
 select SC.StudentId, count (*) as Cnt from 
@@ -147,18 +169,6 @@ $$ LANGUAGE plpgsql;
 
 create trigger MarkTrigger after update or insert or delete on Marks 
     for each row execute procedure update_rows();
-
---1--
-delete from Students where 
-    Students.StudentId not in (select Losers.StudentId from Losers);
-
---2--
-delete from Students where 
-    Students.StudentId in (select Losers.StudentId from Losers where Losers.Cnt >= 3);
-
---3--
-delete from Groups where 
-    not exists (select * from Students where Students.GroupId = Groups.GroupId);
 
 --6--
 drop trigger if exists MarkTrigger on Marks;
