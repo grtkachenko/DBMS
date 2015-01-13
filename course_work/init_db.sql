@@ -1,5 +1,7 @@
 drop trigger if exists AlbumYearTrigger on Albums;
+drop trigger if exists TimeAddedOfTrackTrigger on TrackInPlaylist;
 drop trigger if exists PlaylistTrackNumberTrigger on TrackInPlaylist;
+drop trigger if exists MostPopularTrackRefresher on TrackInPlaylist;
 drop trigger if exists GenreOfAlbumTrigger on TrackInAlbum;
 drop function if exists GetAblumTracks(int);
 drop function if exists GetRealPeopleNameByAlbum(int);
@@ -7,7 +9,10 @@ drop function if exists GetTrackArtists(int);
 drop function if exists GetPlaylistTrackIds(int);
 drop function if exists check_album_year();
 drop function if exists check_playlist_track_number();
+drop function if exists update_most_popular_tracks();
 drop function if exists check_album_tracks_genre();
+drop function if exists update_added_time();
+drop materialized view if exists MostPopularTracks;
 drop view if exists RecentFavouriteTrackIds, RecentFavouriteTrackNames;
 
 drop table if exists TrackInPlaylist, TrackInAlbum, ArtistTrack, Albums, Tracks, PersonRoleInGroup, People, Roles, Artists, Playlists, Genres;
@@ -38,7 +43,7 @@ create table Roles(
 
 create table People(
     PersonId int PRIMARY KEY, 
-    PersonName varchar(20) NOT NULL,
+    PersonName varchar(40) NOT NULL,
     Birthday date NOT NULL,
     Phone varchar(12)
 );
@@ -55,7 +60,7 @@ create table PersonRoleInGroup(
 
 create table Tracks(
     TrackId int PRIMARY KEY, 
-    TrackName varchar(20) NOT NULL,
+    TrackName varchar(40) NOT NULL,
     GenreId int NOT NULL, 
     ArtistId int NOT NULL, 
     Duration interval NOT NULL,
@@ -97,7 +102,7 @@ create table TrackInAlbum(
 create table TrackInPlaylist(
     PlaylistId int, 
     TrackId int, 
-    TimeAdded date NOT NULL,
+    TimeAdded date,
     PRIMARY KEY (PlaylistId, TrackId),
     FOREIGN KEY (PlaylistId) REFERENCES Playlists(PlaylistId) on DELETE CASCADE, 
     FOREIGN KEY (TrackId) REFERENCES Tracks(TrackId) on DELETE CASCADE   
@@ -145,6 +150,23 @@ create function check_album_tracks_genre() returns trigger AS $$
     END;
 $$ LANGUAGE plpgsql;
 
+create function update_added_time() returns trigger AS $$
+    BEGIN
+        IF (TG_OP = 'INSERT' or (TG_OP = 'UPDATE' and NEW.TimeAdded <> OLD.TimeAdded)) THEN
+            update TrackInPlaylist set TimeAdded = localtimestamp 
+                where NEW.TrackId = TrackId and NEW.PlaylistId = PlaylistId;
+        END IF;    
+        RETURN NEW;
+    END;
+$$ LANGUAGE plpgsql;
+
+create function update_most_popular_tracks() returns trigger AS $$
+    BEGIN
+        REFRESH MATERIALIZED VIEW MostPopularTracks;   
+        RETURN NEW;
+    END;
+$$ LANGUAGE plpgsql;
+
 
 create trigger PlaylistTrackNumberTrigger after update or insert on TrackInPlaylist 
     for each row execute procedure check_playlist_track_number();
@@ -154,6 +176,12 @@ create trigger AlbumYearTrigger after update or insert on Albums
 
 create trigger GenreOfAlbumTrigger after update or insert on TrackInAlbum 
     for each row execute procedure check_album_tracks_genre();
+
+create trigger TimeAddedOfTrackTrigger after update or insert on TrackInPlaylist 
+    for each row execute procedure update_added_time();
+
+create trigger MostPopularTrackRefresher after update or insert or delete on TrackInPlaylist 
+    for each statement execute procedure update_most_popular_tracks();
 
 -- Functions
 create function GetAblumTracks(album_id int) returns table(track_id int) as $$
@@ -199,8 +227,12 @@ select RecentTracks.TrackId, count (*) as Cnt from
         where localtimestamp - TrackInPlaylist.TimeAdded <= interval '5 months') as RecentTracks group by RecentTracks.TrackId;
 
 create view RecentFavouriteTrackNames as 
-    select RecTracks.TrackName, RecTracks.TrackId from 
+    select RecTracks.TrackName, RecTracks.Cnt from 
         (Tracks natural join (select * from RecentFavouriteTrackIds) as RecFavTrIds) as RecTracks;
+
+create materialized view MostPopularTracks as 
+    select RecentFavouriteTrackNames.TrackName from RecentFavouriteTrackNames where 
+        RecentFavouriteTrackNames.Cnt = (select max(RecentFavouriteTrackNames.Cnt) from RecentFavouriteTrackNames);
         
 -- Indexes 
 create index RecentTracksInPlaylist on TrackInPlaylist(TimeAdded);
