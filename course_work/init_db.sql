@@ -8,6 +8,7 @@ drop function if exists GetPlaylistTrackIds(int);
 drop function if exists check_album_year();
 drop function if exists check_playlist_track_number();
 drop function if exists check_album_tracks_genre();
+drop view if exists RecentFavouriteTrackIds, RecentFavouriteTrackNames;
 
 drop table if exists TrackInPlaylist, TrackInAlbum, ArtistTrack, Albums, Tracks, PersonRoleInGroup, People, Roles, Artists, Playlists, Genres;
 
@@ -192,7 +193,17 @@ $$ language plpgsql;
 
 
 -- Views
+create view RecentFavouriteTrackIds as 
+select RecentTracks.TrackId, count (*) as Cnt from 
+    (select * from Tracks natural join TrackInPlaylist 
+        where localtimestamp - TrackInPlaylist.TimeAdded <= interval '5 months') as RecentTracks group by RecentTracks.TrackId;
 
+create view RecentFavouriteTrackNames as 
+    select RecTracks.TrackName, RecTracks.TrackId from 
+        (Tracks natural join (select * from RecentFavouriteTrackIds) as RecFavTrIds) as RecTracks;
+        
+-- Indexes 
+create index RecentTracksInPlaylist on TrackInPlaylist(TimeAdded);
 
 
 
