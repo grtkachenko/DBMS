@@ -7,6 +7,8 @@ drop function if exists GetAblumTracks(int);
 drop function if exists GetRealPeopleNameByAlbum(int);
 drop function if exists GetTrackArtists(int);
 drop function if exists GetPlaylistTrackIds(int);
+drop function if exists GetPlaylistRelevance(int);
+drop function if exists MergePlaylists(int, int);
 drop function if exists check_album_year();
 drop function if exists check_playlist_track_number();
 drop function if exists update_most_popular_tracks();
@@ -14,12 +16,14 @@ drop function if exists check_album_tracks_genre();
 drop function if exists update_added_time();
 drop materialized view if exists MostPopularTracks;
 drop view if exists RecentFavouriteTrackIds, RecentFavouriteTrackNames;
-
 drop table if exists TrackInPlaylist, TrackInAlbum, ArtistTrack, Albums, Tracks, PersonRoleInGroup, People, Roles, Artists, Playlists, Genres;
 
+-----------------------------
+---------- Tables -----------
+-----------------------------
 create table Genres(
     GenreId int PRIMARY KEY, 
-    GenreName char(20) NOT NULL,
+    GenreName varchar(20) NOT NULL,
     UNIQUE (GenreName)
 );
 
@@ -102,7 +106,7 @@ create table TrackInAlbum(
 create table TrackInPlaylist(
     PlaylistId int, 
     TrackId int, 
-    TimeAdded date,
+    DateAdded date,
     PRIMARY KEY (PlaylistId, TrackId),
     FOREIGN KEY (PlaylistId) REFERENCES Playlists(PlaylistId) on DELETE CASCADE, 
     FOREIGN KEY (TrackId) REFERENCES Tracks(TrackId) on DELETE CASCADE   
@@ -110,8 +114,9 @@ create table TrackInPlaylist(
 alter table Tracks add CONSTRAINT arttr FOREIGN KEY (ArtistId, TrackId) REFERENCES ArtistTrack(ArtistId, TrackId) on DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
 alter table Albums add CONSTRAINT albtr FOREIGN KEY (AlbumId, TrackId) REFERENCES TrackInAlbum(AlbumId, TrackId) on DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
 
--- Triggers
-
+--------------------------------------------------
+---------- Triggers and their functions ----------
+--------------------------------------------------
 create function check_playlist_track_number() returns trigger AS $$
     BEGIN
         if ((select count(*)
@@ -152,21 +157,13 @@ $$ LANGUAGE plpgsql;
 
 create function update_added_time() returns trigger AS $$
     BEGIN
-        IF (TG_OP = 'INSERT' or (TG_OP = 'UPDATE' and NEW.TimeAdded <> OLD.TimeAdded)) THEN
-            update TrackInPlaylist set TimeAdded = localtimestamp 
+        IF (TG_OP = 'INSERT' or (TG_OP = 'UPDATE' and NEW.DateAdded <> OLD.DateAdded)) THEN
+            update TrackInPlaylist set DateAdded = localtimestamp 
                 where NEW.TrackId = TrackId and NEW.PlaylistId = PlaylistId;
         END IF;    
         RETURN NEW;
     END;
 $$ LANGUAGE plpgsql;
-
-create function update_most_popular_tracks() returns trigger AS $$
-    BEGIN
-        REFRESH MATERIALIZED VIEW MostPopularTracks;   
-        RETURN NEW;
-    END;
-$$ LANGUAGE plpgsql;
-
 
 create trigger PlaylistTrackNumberTrigger after update or insert on TrackInPlaylist 
     for each row execute procedure check_playlist_track_number();
@@ -180,10 +177,9 @@ create trigger GenreOfAlbumTrigger after update or insert on TrackInAlbum
 create trigger TimeAddedOfTrackTrigger after update or insert on TrackInPlaylist 
     for each row execute procedure update_added_time();
 
-create trigger MostPopularTrackRefresher after update or insert or delete on TrackInPlaylist 
-    for each statement execute procedure update_most_popular_tracks();
-
--- Functions
+--------------------------------------
+---------- Useful functions ----------
+--------------------------------------
 create function GetAblumTracks(album_id int) returns table(track_id int) as $$
     begin
         return query 
@@ -193,7 +189,7 @@ create function GetAblumTracks(album_id int) returns table(track_id int) as $$
 $$ language plpgsql;
 
 create function GetRealPeopleNameByAlbum(album_id int) returns table(name varchar, role varchar) as $$
-     DECLARE 
+    DECLARE 
         artist_id Artists.ArtistId%TYPE;
     begin
         select Albums.ArtistId into artist_id from Albums where Albums.AlbumId = album_id;
@@ -211,7 +207,7 @@ create function GetTrackArtists(track_id int) returns setof varchar as $$
     end;
 $$ language plpgsql;
 
-create function GetPlaylistTrackIds(playlist_id int) returns table(track_id varchar) as $$
+create function GetPlaylistTrackIds(playlist_id int) returns table(track_id int) as $$
     begin
         return query 
             (select TrackInPlaylist.TrackId as track_id from TrackInPlaylist
@@ -219,24 +215,74 @@ create function GetPlaylistTrackIds(playlist_id int) returns table(track_id varc
     end;
 $$ language plpgsql;
 
+create function GetPlaylistRelevance(playlist_id int) returns real as $$
+    DECLARE 
+        result real;
+    begin
+        if (not exists (select * from TrackInPlaylist where PlaylistId = playlist_id)) THEN
+            return 0;
+        END IF;
 
--- Views
+        select avg(TrCnt.Cnt) into result from 
+            (select Cnt from RecentFavouriteTrackIds where 
+                exists (select * from TrackInPlaylist where RecentFavouriteTrackIds.TrackId = TrackInPlaylist.TrackId and TrackInPlaylist.PlaylistId = playlist_id)) as TrCnt;
+        return result;  
+    end;
+$$ language plpgsql;
+
+create function MergePlaylists(playlist1_id int, playlist2_id int) returns void as $$
+    DECLARE 
+        from_pl int;
+        to_pl int;
+    begin
+        if (playlist1_id = playlist2_id) THEN
+            RAISE EXCEPTION 'Identical ids; Cannot merge';
+        END IF;
+
+        if (GetPlaylistRelevance(playlist1_id) > GetPlaylistRelevance(playlist2_id)) THEN
+            from_pl := playlist2_id;
+            to_pl := playlist1_id;
+        ELSE
+            to_pl := playlist2_id;
+            from_pl := playlist1_id;
+        END IF; 
+
+        update TrackInPlaylist set PlaylistId = to_pl 
+            where PlaylistId = from_pl and 
+                not exists (select * from TrackInPlaylist as TIP2 
+                    where TIP2.PlaylistId = to_pl and TrackInPlaylist.TrackId = TIP2.TrackId);
+
+        delete from TrackInPlaylist where PlaylistId = from_pl;
+    end;
+$$ language plpgsql;
+
+-------------------------------------------------------
+---------- View and their functions&triggers ----------
+-------------------------------------------------------
 create view RecentFavouriteTrackIds as 
-select RecentTracks.TrackId, count (*) as Cnt from 
-    (select * from Tracks natural join TrackInPlaylist 
-        where localtimestamp - TrackInPlaylist.TimeAdded <= interval '5 months') as RecentTracks group by RecentTracks.TrackId;
+    select RecentTracks.TrackId, count (*) as Cnt from 
+        (select * from Tracks natural join TrackInPlaylist 
+            where localtimestamp - TrackInPlaylist.DateAdded <= interval '5 months') as RecentTracks group by RecentTracks.TrackId;
 
 create view RecentFavouriteTrackNames as 
     select RecTracks.TrackName, RecTracks.Cnt from 
         (Tracks natural join (select * from RecentFavouriteTrackIds) as RecFavTrIds) as RecTracks;
 
+create function update_most_popular_tracks() returns trigger AS $$
+    BEGIN
+        REFRESH MATERIALIZED VIEW MostPopularTracks;   
+        RETURN NEW;
+    END;
+$$ LANGUAGE plpgsql;
+
+create trigger MostPopularTrackRefresher after update or insert or delete on TrackInPlaylist 
+    for each statement execute procedure update_most_popular_tracks();
+
 create materialized view MostPopularTracks as 
     select RecentFavouriteTrackNames.TrackName from RecentFavouriteTrackNames where 
         RecentFavouriteTrackNames.Cnt = (select max(RecentFavouriteTrackNames.Cnt) from RecentFavouriteTrackNames);
         
--- Indexes 
-create index RecentTracksInPlaylist on TrackInPlaylist(TimeAdded);
-
-
-
-
+-----------------------------
+---------- Indexes ----------
+-----------------------------
+create index RecentTracksInPlaylist on TrackInPlaylist(DateAdded);
